@@ -9,6 +9,8 @@ import time
 
 __author__ = 'valorzhong'
 
+def cleanup(origin):
+    return remove_spaces(remove_tag(remove_style(remove_javascript(origin))))
 
 def remove_tag(origin):
     return re.sub(r'<[^>]+>', '', origin)
@@ -43,6 +45,9 @@ def fetch(url, max_retry = 3, encoding='utf-8', error_sleep_second=1):
     return result
 
 def download_file(url, save_to):
+    """
+    Please use downloader.py
+    """
     opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
     request = urllib2.Request(url)
     remote = opener.open(request)
@@ -82,6 +87,25 @@ def write_id(path, id):
     writer = open(path, 'w')
     writer.write(str(id))
     writer.flush()
+
+def simple_launch(url_format, history_file, fetch_handler, fail_handler, default_start_id, max_invalid_count=20):
+    start_id = read_id(history_file, default=default_start_id)
+    invalid_count = 0
+    max_invalid = max_invalid_count
+    i = start_id
+    while True:
+        url = url_format % i
+        content = fetch(url, max_retry=1)
+        if content:
+            invalid_count = 0
+            fetch_handler(i, content)
+            write_id(history_file, i)
+        else:
+            fail_handler(i)
+            invalid_count += 1
+            if invalid_count > max_invalid:
+                break
+        i += 1
 
 
 if __name__ == '__main__':
