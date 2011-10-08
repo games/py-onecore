@@ -13,6 +13,10 @@ class Task(object):
     url = ''
     save_to = ''
     tag = None
+    will_redirect = False
+    debug_level = 0
+    block_number = 6
+    complete_handler = None
 
 class BlockThread(Thread):
     def __init__(self, task_name, url, filename, ranges):
@@ -84,19 +88,22 @@ def get_block_ranges(total_size, block_number):
     ranges.append((block_size * (block_number - 1), total_size - 1))
     return ranges
 
-def fetch(task, block_num = 6, complete_handler=None):
+def fetch(task):
     if os.path.exists(task.save_to):
         return
 
-    file_url = get_redirect_url(task.url)
+    if task.will_redirect:
+        file_url = get_redirect_url(task.url)
+    else:
+        file_url = task.url
     file_size = get_file_size(file_url)
-    ranges = get_block_ranges(file_size, block_num)
+    ranges = get_block_ranges(file_size, task.block_number)
 
-    task_names = ['task_%d' % i for i in range(0, block_num)]
-    file_names = ['%s_%d.loading' % (task.save_to, i) for i in range(0, block_num)]
+    task_names = ['task_%d' % i for i in range(0, task.block_number)]
+    file_names = ['%s_%d.loading' % (task.save_to, i) for i in range(0, task.block_number)]
 
     treads = []
-    for i in range(0, block_num):
+    for i in range(0, task.block_number):
         thread = BlockThread(task_names[i], file_url, file_names[i], ranges[i])
         thread.setDaemon(True)
         thread.start()
@@ -110,11 +117,13 @@ def fetch(task, block_num = 6, complete_handler=None):
 
     time.sleep(1)
     while running():
-        total_downloaded = sum([thread.downloaded for thread in treads])
-        process = total_downloaded / file_size * 100
-        print '%d/%d - %d' % (total_downloaded, file_size, process)
-        for thread in treads:
-            print '%s: %d - %s' % (thread.task_name, thread.downloaded, thread.filename)
+        if task.debug_level > 0:
+            total_downloaded = sum([thread.downloaded for thread in treads])
+            process = total_downloaded / file_size * 100
+            print '%db/%db - %d%s' % (total_downloaded, file_size, process, '%')
+            if task.debug_level > 1:
+                for thread in treads:
+                    print '%s: %db - %s' % (thread.task_name, thread.downloaded, thread.filename)
         time.sleep(0.5)
 
     file_opener = open(task.save_to, 'wb+')
@@ -128,22 +137,29 @@ def fetch(task, block_num = 6, complete_handler=None):
             pass
     file_opener.close()
 
-    if complete_handler:
-        complete_handler(task)
+    if task.complete_handler:
+        task.complete_handler(task)
 
-    print 'Downloaded!!'
+    if task.debug_level > 0:
+        print 'Downloaded!!'
 
 
 if __name__ == '__main__':
 
-    id = '58817'
-    block_num = 6
+    id = '58813'
+
+    def complete_handler(task):
+        print 'finish!!'
     
     task = Task()
     task.url = 'http://www.nduoa.com/apk/download/%s' % id
     task.save_to = '/Users/searover/tmp/%s.apk' % id
+    task.will_redirect = True
+    task.debug_level = 2
+    task.block_number = 6
+    task.complete_handler = complete_handler
 
-    fetch(task, block_num)
+    fetch(task)
 
 
 
