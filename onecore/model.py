@@ -65,6 +65,8 @@ class Model(object):
             result = array
         elif isinstance(member, Model):
             result = member.format_to_storage()
+        elif isinstance(member, ObjectId):
+            result = str(member)
         elif not callable(member):
             result = member
         return result
@@ -86,6 +88,7 @@ class Model(object):
 if __name__ == '__main__':
     class C(Model):
         id = 0
+        kk = ObjectId('4e90965a29624d0e4c000003')
         name = 'C name'
 
     arr = []
