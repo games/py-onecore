@@ -30,7 +30,7 @@ def remove_tag_attrs(origin):
 def remove_non_chinese_characters(origin):
     return re.sub(r'^[\u300a\u300b]|[\u4e00-\u9fa5]|[\uFF00-\uFFEF]|\s+', '', origin)
 
-def fetch(url, max_retry = 3, encoding='utf-8', error_sleep_second=1):
+def fetch_text(url, max_retry = 3, encoding='utf-8', error_sleep_second=1):
     result = None
     retry = 0
     while retry < max_retry:
@@ -44,17 +44,19 @@ def fetch(url, max_retry = 3, encoding='utf-8', error_sleep_second=1):
                 time.sleep(error_sleep_second)
     return result
 
-def download_file(url, save_to):
-    """
-    Please use downloader.py
-    """
-    opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
+def fetch_file(url):
+    opener = urllib2.build_opener(urllib2.HTTPHandler)
     request = urllib2.Request(url)
     remote = opener.open(request)
-    local = open(save_to, 'w')
-    local.write(remote.read())
-    local.close()
+    data = remote.read()
     remote.close()
+    return data
+
+def save_file(url, save_to):
+    data = fetch_file(url)
+    local = open(save_to, 'w')
+    local.write(data)
+    local.close()
 
 def get_with_pattern(pattern, content, filter=None):
     match = re.search(pattern, content)
@@ -95,7 +97,7 @@ def simple_launch(url_format, history_file, fetch_handler, fail_handler, default
     i = start_id
     while True:
         url = url_format % i
-        content = fetch(url, max_retry=1)
+        content = fetch_text(url, max_retry=1)
         if content:
             invalid_count = 0
             fetch_handler(i, content)
@@ -109,5 +111,5 @@ def simple_launch(url_format, history_file, fetch_handler, fail_handler, default
 
 
 if __name__ == '__main__':
-    id = '59130'
-    download_file('http://www.nduoa.com/apk/download/%s' % id, '/Users/searover/tmp/%s.apk' % id)
+    save_file('http://avno1.com/attachments/2009/12/4_200912311923461WrOT.thumb.jpg', '/Users/searover/tmp/aa.jpg')
+    print 'finish'
